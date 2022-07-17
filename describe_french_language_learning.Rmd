@@ -8,11 +8,47 @@ date: '2022-07-17'
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-# Load dataset
+# Load dataset and check dimensions
 ```{r}
 source("config.R")
 
 data <- read.delim2(path_french_language_learning, quote = "")
 dim(data)
+```
+# Checkout label and features
+```{r}
+names(data)
+```
+```{r}
+interesting_cols = names(data)[c(9,11,15,18,21,25)]
+```
+
+## Label
+```{r}
+print(table(data$Outcome)) # absolute occurences of label
+print(table(data$Outcome)/length(data$Outcome))
+data$Outcome
+```
+### What happens for empty outcomes?
+
+```{r}
+unique(data[data$Outcome=="","Action"])
+```
+### What actions are associated to non-empty outcomes?
+
+```{r}
+table(data[data$Outcome!="","Action"])
+```
+### What is a UpdateComboBox action?
+```{r}
+table(data[data$Action=="UpdateComboBox",c("Problem.Name")])[1:50]
+```
+### What is an ANSWER action
+
+```{r}
+table(data[data$Action=="ANSWER",c("Problem.Name")])[1:50]
+```
+```{r}
+data[data$Action=="ANSWER",c("Problem.Name","Input","Outcome")]
 ```
 
