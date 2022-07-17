@@ -27,7 +27,7 @@ interesting_cols = names(data)[c(9,11,15,18,21,25)]
 ```{r}
 print(table(data$Outcome)) # absolute occurences of label
 print(table(data$Outcome)/length(data$Outcome))
-data$Outcome
+sample(data$Outcome, 100)
 ```
 ### What happens for empty outcomes?
 
@@ -49,6 +49,6 @@ table(data[data$Action=="UpdateComboBox",c("Problem.Name")])[1:50]
 table(data[data$Action=="ANSWER",c("Problem.Name")])[1:50]
 ```
 ```{r}
-data[data$Action=="ANSWER",c("Problem.Name","Input","Outcome")]
+data[data$Action=="ANSWER",c("Problem.Name","Input","Outcome")][950:1000,]
 ```
 
