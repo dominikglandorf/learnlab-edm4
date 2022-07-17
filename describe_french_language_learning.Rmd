@@ -1,0 +1,18 @@
+---
+title: "Describe French Language Learning"
+output: pdf_document
+date: '2022-07-17'
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Load dataset
+```{r}
+source("config.R")
+
+data <- read.delim2(path_french_language_learning, quote = "")
+dim(data)
+```
+
