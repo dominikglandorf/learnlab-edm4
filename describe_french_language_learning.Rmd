@@ -8,13 +8,94 @@ date: '2022-07-17'
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+
+```{r echo=FALSE,include=FALSE}
+
+#install packages only if you have not already done so 
+list.of.packages <- c("rticles","psych","ggplot2","dplyr","DescTools","lsmeans","stats","stats4","xlsx","lmtest","MASS","gmodels","BioStatR","olsrr","nlme","orcutt",'lme4','tidyverse','tiidyr','fastglm')
+new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
+if(length(new.packages)) install.packages(new.packages,repos="http://lib.stat.cmu.edu/R/CRAN/")
+
+#library packages
+for (pkg in c("rticles","psych","ggplot2","dplyr","DescTools","lsmeans","stats","stats4","xlsx","lmtest","MASS","gmodels","BioStatR","olsrr","nlme","orcutt",'lme4','data.table','tidyr','fastglm')) {
+  library(pkg, character.only = TRUE)
+}
+
+setwd("./")
+```
+
+
 # Load dataset and check dimensions
 ```{r}
 source("config.R")
 
-data <- read.delim2(path_french_language_learning, quote = "")
-dim(data)
+data <- fread(path_french_language_learning)
+
+subset(data, !is.na(data))
+
+summary(data)
+
+## RQ1 number of questions answered in 10 minutes -- high motivation or low motivation 
+## feature engineering for predictors -- how many attempts in each oppo? -- how long they spent in each oppo?
+## history_seen -- number opportunities
+## just because the person is motivated may not make the more correct? or 
+## when they work more they get more correct?
+## linguistic analysis -- close to the lexeme -- singular/third person -- is not a knowledge component -- tags as lexemes as predictors in the -- if its data driven 
+## https://www.jacklynch.net/language.html
+
+## RQ2 anglo-saxonic, romance languages, romanian -- french, greek -- slavic (check wiki) -- Honeiah -- https://www.jacklynch.net/language.html
+## if linguistics are correct -- german and english have more overlap than other language pairs 
+## ui_language to predict their accuracy not necessary to look at cognates -- do they perform better on avg than mandarin 
+## they could be better before -- or do better
+## subgroup or word-level? -- lot variance
+## language is related or unrelated -- at word to see the overlap character match (similarity) between the words
+## other way just look at the families -- spanish and english vs german and english or spanish -- german
+## words that seem they are cognates but not -- most well studied language families in the world (Indo European)
+## false friends -- theory of similarity -> predict the opposite (harder to learn but looks easy) -- if you can find those in the data counter point to the similarity argument
+## how many words look similar -- even better predictor -- proportions -- they won't be same from a quantiative
+## find lists online -- people that whose L1 is english (embrasada) doesn't mean embarassing -- it's a false friend between spanish and portuguese (even within the same family)
+## spanish to english; chinese to english 
+## ui_language pt -- portuguese speakers Brazil/Portugal (some pronunciation)
+
 ```
+
+
+```{r}
+
+
+# https://github.com/jaredhuling/fastglm
+#afm.model.reg <- glmer(p_recall ~ (1|user_id) + (history_seen|lexeme_id) - 1,
+                       #data=duolingo_df)#, family=binomial())
+```
+
+```{r}
+duolingo_df <- fread('./learning_traces.13m.csv',showProgress = TRUE)
+duolingo_df <- duolingo_df[1:100000]
+```
+
+```{r}
+duolingo_df$lexeme_id  <- as.factor(duolingo_df$lexeme_id)
+duolingo_df$user_id  <- as.factor(duolingo_df$user_id)
+duolingo_df <- subset(duolingo_df, !is.na(duolingo_df$p_recall) | !is.na(duolingo_df$lexeme_id))
+summary(duolingo_df)
+
+afm.model.reg <- glmer(p_recall ~ (1|user_id) + (history_seen|word_root) - 1,
+                       data=duolingo_df)#, family=binomial())
+summary(afm.model.reg)
+AIC(afm.model.reg)  ## output AIC
+BIC(afm.model.reg)  ## output BIC
+
+#colSums(is.na(data))
+#no.rm=TRUE
+#na.omit
+```
+
+
+```{r}
+library()
+```
+
+
 # Checkout label and features
 ```{r}
 names(data)

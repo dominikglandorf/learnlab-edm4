@@ -1,1 +1,1 @@
-path_french_language_learning = "~/Documents/Studium/AIED/Summerschool/ds74_tx_2022_0716_034121/ds74_tx_All_Data_65_2021_0810_050335.txt"
+path_french_language_learning = "ds74_student_step_All_Data_65_2021_0810_051112.txt"
