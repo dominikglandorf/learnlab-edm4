@@ -1,0 +1,34 @@
+---
+title: "DuoLingo"
+output: pdf_document
+date: '2022-07-18'
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(data.table)
+```
+
+```{r cars}
+source("config.R")
+
+data <- fread(path_duo)
+dim(data)
+colSums(is.na(data))
+```
+
+
+```{r}
+data$lexeme.id = as.factor(data$lexeme.id)
+data$user.id = as.factor(data$user.id)
+
+```
+
+```{r}
+#nrow(data[data$p_recall==1,])/nrow(data) # 83% are completely correct
+#data2$correctness=data2$p_recall==1
+
+#model<-glm(p_recall~history_seen,data=data)
+afm.model.reg <- glmer(p_recall ~ (1|user_id) + (history_seen|lexeme_id) - 1, data=data)
+```
+

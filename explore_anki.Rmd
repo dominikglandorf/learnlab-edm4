@@ -1,0 +1,28 @@
+---
+title: "explore_anki_language_learning"
+output: pdf_document
+date: '2022-07-17'
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+# Load dataset
+```{r}
+source("config.R")
+data = read.csv(path_anki)
+dim(data)
+```
+# Check features
+```{r}
+names(data)
+head(data)
+```
+```{r}
+spanish = data[data$did == 1545603082848,] # deck id for spanish vocab
+```
+
+```{r}
+counts = aggregate(spanish$timestamp, by=list(spanish$cid),FUN=length)
+```
+
