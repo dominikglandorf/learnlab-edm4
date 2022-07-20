@@ -7,28 +7,159 @@ date: '2022-07-18'
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(data.table)
+library(tidyr)
+library(stringr)
+library(lme4)
+library(ggplot2)
 ```
 
 ```{r cars}
 source("config.R")
 
 data <- fread(path_duo)
+data$lexeme_id = as.factor(data$lexeme_id)
+data$user_id = as.factor(data$user_id)
+data$ui_language = as.factor(data$ui_language)
+data$learning_language = as.factor(data$learning_language)
 dim(data)
+
 colSums(is.na(data))
 ```
 
 
 ```{r}
-data$lexeme.id = as.factor(data$lexeme.id)
-data$user.id = as.factor(data$user.id)
+#data$p_recall = sapply(data$p_recall, function(v){return(min(max(v,0.0001),0.9999))})
+data$word_root <- as.factor(substr(data$lexeme_string, str_locate(data$lexeme_string, '/')[,1]+1, str_locate(data$lexeme_string, '<')[,1]-1))
+data$p_log_odds = log(data$p_recall/(1-data$p_recall))
+data = data[data$history_seen < 50,]
+```
+```{r}
+summary(data)
+table(data$ui_language, data$learning_language) # from eng to deu, esp, por, fre, ita, from pt,it,es to en
+nrow(data[data$p_recall==1,])/nrow(data) # 83% are completely correct
+```
+```{r}
+duo_to_en = data[data$learning_language == 'en',]
+length(unique(duo_to_en$word_root))
+length(unique(duo_to_en$user_id))
+
+duo_from_en = data[data$learning_language != 'en',]
+length(unique(duo_from_en$word_root))
+length(unique(duo_from_en$user_id))
+
+duo_from_en$en_word_root = c()
+# join translations to english lexemes
+trans_es = fread("es_to_en.csv")
+duo_with_es = merge(duo_from_en[duo_from_en$learning_language=="es",], as.data.frame(trans_es[,c("es_word_root","en_word_root")]), by.x="word_root", by.y="es_word_root")
+
+trans_fr = fread("fr-to-en.csv")
+duo_with_fr = merge(duo_from_en[duo_from_en$learning_language=="fr",], as.data.frame(trans_fr[,c("fr_word_root","en_word_root")]), by.x="word_root", by.y="fr_word_root")
+
+trans_de = fread("de-to-en.csv")
+duo_with_ger = merge(duo_from_en[duo_from_en$learning_language=="de",], as.data.frame(trans_de[,c("de_word_root","en_word_root")]), by.x="word_root", by.y="de_word_root")
+
+trans_it = fread("it_to_en.csv")
+duo_with_it = merge(duo_from_en[duo_from_en$learning_language=="it",], as.data.frame(trans_it[,c("it_word_root","en_word_root")]), by.x="word_root", by.y="it_word_root")
+
+trans_pt = fread("pt_to_en.csv")
+duo_with_pt = merge(duo_from_en[duo_from_en$learning_language=="pt",], as.data.frame(trans_pt[,c("pt_word_root","en_word_root")]), by.x="word_root", by.y="pt_word_root")
+
+duo_trans = rbind(duo_with_es, duo_with_fr, duo_with_ger, duo_with_it)
+
+dim(duo_trans)
+
+
+head(data2[,c('en_word_root','word_root')])
+# TODO: carefully select words, similiar ones, dissimilar ones, false friends
+# choose 5 random users, p_recall ~ opp * word
+# hypothesis: similar words
+# suggestion: LearnSphere
+```
+```{r}
+summary(duo_to_en)
+```
+```{r}
+#word_counts = aggregate(duo_to_en$lexeme_id, by=list(word_root = duo_to_en$word_root), FUN=length)
+#word_counts[order(-word_counts$x),][1:500,"word_root"]
+num_langs = duo_trans %>%
+  group_by(en_word_root) %>%
+  summarise(n_distinct(learning_language))
+num_langs[order(-num_langs$`n_distinct(learning_language)`),]
+
+word_counts = aggregate(duo_from_en$lexeme_id, by=list(word_root = duo_from_en$word_root, L1 = duo_from_en$learning_language), FUN=length)
+
+for (l1 in unique(word_counts$L1)) {
+  l1_counts = subset(word_counts, L1==l1)
+  write.csv(l1_counts[order(-l1_counts$x),c("word_root")], paste0(l1,'.csv'))
+}
 
 ```
 
 ```{r}
-#nrow(data[data$p_recall==1,])/nrow(data) # 83% are completely correct
-#data2$correctness=data2$p_recall==1
+model = glm(p_recall~history_seen, data=duo_to_en)
+#plot(seq(0,50), model$coefficients[1]+seq(0,50)*-7.160e-03, type="l")
+summary(model)
+model2 = glm(p_recall~history_seen, data=duo_to_en)
+#plot(seq(0,50), model$coefficients[1]+seq(0,50)*-7.160e-03, type="l")
+summary(model2)
+```
+```{r}
+emp_learning = aggregate(duo_to_en$p_recall, by=list(duo_to_en$history_seen), FUN=mean)
+num_users = aggregate(duo_to_en$p_recall, by=list(duo_to_en$history_seen), FUN=length)
+plot(emp_learning$Group.1[1:150], emp_learning$x[1:150], ylim=c(0,1))
+lines(num_users$Group.1[1:150], num_users$x[1:150]/max(num_users$x), col="red")
+print(merge(emp_learning, num_users, by="Group.1"))
+```
+```{r}
+emp_learning = aggregate(duo_from_en$p_recall, by=list(duo_from_en$history_seen), FUN=mean)
+num_users = aggregate(duo_from_en$p_recall, by=list(duo_from_en$history_seen), FUN=length)
+plot(emp_learning$Group.1[1:150], emp_learning$x[1:150], ylim=c(0,1))
+lines(num_users$Group.1[1:150], num_users$x[1:150]/max(num_users$x), col="red")
+print(merge(emp_learning, num_users, by="Group.1"))
+```
+```{r}
+sample(duo_from_en$user_id, 10)
+```
+```{r}
+duo_from_en[duo_from_en$user_id=="u:hLQ5" & lexeme_string=="adeus/adeus<ij>",]
+```
+
+
+
+```{r}
+kc_filter = duo_to_en$word_root=="eat"
+emp_learning = aggregate(duo_to_en$p_recall[kc_filter], by=list(duo_to_en$history_seen[kc_filter]), FUN=mean)
+plot(emp_learning$Group.1[1:150], emp_learning$x[1:150])
+```
+```{r}
+for (word in c(num_langs[num_langs$`n_distinct(learning_language)`==4,]$en_word_root)[1:10]) {
+  print(word)
+  kc_filter = duo_trans$en_word_root==word
+  emp_learning = aggregate(p_recall ~ history_seen * ui_language, data = duo_to_en[kc_filter], mean)
+  users = aggregate(p_recall ~ history_seen * ui_language, data = duo_to_en[kc_filter], mean)
+  emp_learning = merge
+  print(emp_learning %>% ggplot() + 
+    geom_line(aes(x = history_seen, y = p_recall, group = ui_language, color=ui_language))+ggtitle(word) )
+}
+```
+```{r}
+for (word in unique()) {
+  kc_filter = duo_to_en$word_root==word
+  emp_learning = aggregate(p_recall ~ history_seen * ui_language, data = duo_to_en[kc_filter], mean)
+  users = aggregate(p_recall ~ history_seen * ui_language, data = duo_to_en[kc_filter], mean)
+  emp_learning = merge
+  print(emp_learning %>% ggplot() + 
+    geom_line(aes(x = history_seen, y = p_recall, group = ui_language, color=ui_language))+ggtitle(word) )
+}
+```
+
+```{r}
 
 #model<-glm(p_recall~history_seen,data=data)
-afm.model.reg <- glmer(p_recall ~ (1|user_id) + (history_seen|lexeme_id) - 1, data=data)
+#afm.model.reg <- glmer(p_recall ~ (history_seen|lexeme_id) - 1, data=data)
+
+#afm.model.reg <- glmer(log_odds ~ (1|user_id) + (history_seen|word_root) - 1,
+                       #data)#, family=binomial())
+#summary(afm.model.reg)
 ```
 
