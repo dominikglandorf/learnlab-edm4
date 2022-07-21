@@ -1,0 +1,58 @@
+---
+title: "Duo_Forgetting"
+output: pdf_document
+date: '2022-07-21'
+---
+
+```{r}
+source("config.R")
+
+data <- fread(path_duo)
+data$user_id = as.factor(data$user_id)
+data$ui_language = as.factor(data$ui_language)
+data$learning_language = as.factor(data$learning_language)
+```
+
+```{r}
+# duo_en_pt = data[data$learning_language == "pt",]
+# duo_en_pt$word_root <- as.factor(substr(duo_en_pt$lexeme_string, str_locate(duo_en_pt$lexeme_string, '/')[,1]+1, str_locate(duo_en_pt$lexeme_string, '<')[,1]-1))
+# duo_en_pt = duo_en_pt[duo_en_fr$word_root!="",]
+```
+
+```{r}
+dim(duo_trans)
+```
+
+
+```{r}
+duo_trans_all5 = subset(duo_trans[duo_trans$en_word_root %in% num_langs[num_langs$`n_distinct(learning_language)`==5,]$en_word_root])
+
+afm.word_root <- lmer(p_recall ~ (history_seen|en_word_root), data=duo_trans_all5)
+
+afm.word_root_lang <- glmer(p_recall ~ (1|en_word_root) + (history_seen|learning_language), data=duo_trans_all5)
+
+afm.word_root_lang_delta <- glmer(p_recall ~ history_seen + log(delta) + (history_seen + log(delta) |en_word_root) + (history_seen|learning_language), data=duo_trans_all5)
+```
+
+```{r}
+preds = predict(afm.word_root_lang)
+plot(duo_trans_all5$history_seen[duo_trans_all5$en_word_root=="cat"], preds[duo_trans_all5$en_word_root=="cat"],col=duo_trans_all5$learning_language[duo_trans_all5$en_word_root=="cat"])
+ggplot2 
+duo_trans_all5$preds=preds
+word_filter=duo_trans_all5$en_word_root=="beer"
+emp_learning = aggregate(p_recall ~ history_seen * learning_language, data = duo_trans_all5[word_filter], mean)
+
+ggplot() +
+  geom_line(data=duo_trans_all5[word_filter,], aes(x=history_seen, y=preds, group=learning_language, color=learning_language)) +
+  scale_color_discrete(labels = c("German (Bier)", "Spanish (cerveza)", "French (bière)", "Italian (birra)", "Portuguese (cerveja)")) +
+  labs(color="Learned language", title="Predicted learning curve for 'Beer'", y="predicted recall", x="opportunities")+theme_classic() +
+  ylim(0.75,1)
+
+ggplot() +
+  geom_line(data=emp_learning, aes(x=history_seen, y=p_recall, group=learning_language, color=learning_language)) +
+  scale_color_discrete(labels = c("German (Bier)", "Spanish (cerveza)", "French (bière)", "Italian (birra)", "Portuguese (cerveja)")) +
+  labs(color="Learning language", title="Empirical learning curve for 'Beer'", y="predicted recall", x="opportunities")+theme_classic() +
+  ylim(0.75,1)
+
+```
+

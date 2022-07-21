@@ -10,6 +10,7 @@ library(data.table)
 library(tidyr)
 library(stringr)
 library(lme4)
+library(dplyr)
 library(ggplot2)
 ```
 
@@ -24,7 +25,13 @@ data$learning_language = as.factor(data$learning_language)
 dim(data)
 
 colSums(is.na(data))
+
 ```
+```{r}
+length(unique(data$lexeme_id))
+length(unique(data$user_id))
+```
+
 
 
 ```{r}
@@ -76,7 +83,7 @@ duo_trans = rbind(duo_with_es, duo_with_fr, duo_with_ger, duo_with_it, duo_with_
 duo_trans = duo_trans[duo_trans$word_root!="",]
 dim(duo_trans)
 
-# TODO: carefully select words, similiar ones, dissimilar ones, false friends
+# TODO: carefully select words, similar ones, dissimilar ones, false friends
 # choose 5 random users, p_recall ~ opp * word
 # hypothesis: similar words
 # suggestion: LearnSphere
@@ -174,13 +181,5 @@ plot(duo_trans$delta, duo_trans$p_recall, type="p")
 ```{r}
 #unique(duo_trans$lexeme_string[str_detect(duo_trans$lexeme_string, "<det>")])
 #model<-glm(p_recall~history_seen,data=data)
-
-#afm.model.reg <- glm(p_recall ~ learning_language, data=duo_trans)
-
-#afm.model.reg <- glmer(p_recall ~ (history_seen|lexeme_id) - 1, data=data)
-
-#afm.model.reg <- glmer(log_odds ~ (1|user_id) + (history_seen|word_root) - 1,
-                       #data)#, family=binomial())
-#summary(afm.model.reg)
 ```
 

@@ -1,0 +1,53 @@
+---
+title: "DuoTemporal"
+output: pdf_document
+date: '2022-07-21'
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(data.table)
+library(tidyr)
+library(stringr)
+library(lme4)
+library(ggplot2)
+```
+
+```{r}
+source("config.R")
+
+data <- fread(path_duo)
+data$user_id = as.factor(data$user_id)
+data$ui_language = as.factor(data$ui_language)
+data$learning_language = as.factor(data$learning_language)
+```
+
+```{r}
+duo_en_fr = data[data$learning_language == "fr",]
+duo_en_fr$word_root <- as.factor(substr(duo_en_fr$lexeme_string, str_locate(duo_en_fr$lexeme_string, '/')[,1]+1, str_locate(duo_en_fr$lexeme_string, '<')[,1]-1))
+duo_en_fr = duo_en_fr[duo_en_fr$word_root!="",]
+
+
+speed = aggregate(timestamp ~ user_id, duo_en_fr, FUN=function(ts){
+    ts_ord = ts[order(ts)]
+    diffs = diff(ts_ord)
+    return(mean(diffs[diffs>0&diffs<1800]))
+})
+names(sessions) = c("user_id","total_sessions")
+
+sessions = aggregate(timestamp ~ user_id, duo_en_fr, FUN=function(i)length(unique(i)))
+names(sessions) = c("user_id","total_sessions")
+
+opps = aggregate(session_seen ~ user_id, duo_en_fr, FUN=sum)
+names(opps) = c("user_id", "total_opps")
+
+words_learned = aggregate(word_root ~ user_id, duo_en_fr[p_recall==1,], FUN=function(wrs)length(unique(wrs)))
+```
+```{r}
+user_stats = merge(merge(sessions, opps, by="user_id"), words_learned, by="user_id")
+cor(user_stats[,c("timestamp","session_seen","word_root")])
+```
+
